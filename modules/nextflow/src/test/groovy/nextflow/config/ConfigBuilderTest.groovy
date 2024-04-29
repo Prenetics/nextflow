@@ -2738,5 +2738,40 @@ class ConfigBuilderTest extends Specification {
         SysEnv.pop()
     }
 
+    def 'should include toleration and nodeselector' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def configMain = folder.resolve('test.conf')
+        configMain.text = '''
+        k8s {
+            pod = [
+                volumeClaim: 'bi-readonly-pvc',
+                mountPath: '/mnt/bi/abc',
+                imagePullPolicy: 'IfNotPresent',
+                imagePullSecret: 'dockersecret',
+                nodeSelector: 'purpose=nextflow',
+                toleration: [
+                    [
+                        key:'purpose',
+                        operator:'Equal',
+                        value:'nextflow',
+                        effect:'NoSchedule'
+                    ]
+                ]
+            ]
+        }
+        '''
+
+        when:
+        def config = new ConfigBuilder().buildConfig0([:], [configMain])
+
+        then:
+        config.k8s.pod.mountPath == '/mnt/bi/abc'
+        config.k8s.pod.nodeSelector == 'purpose=nextflow'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }
 
